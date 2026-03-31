@@ -27,12 +27,12 @@ interface BlueprintCanvasProps {
   onEntitySelect?: (entity: Entity | null) => void;
 }
 
-export default function BlueprintCanvas({ 
-  layout, 
-  onLayoutChange, 
-  onEntitySelect 
+export default function BlueprintCanvas({
+  layout,
+  onLayoutChange,
+  onEntitySelect
 }: BlueprintCanvasProps) {
-  
+
   const [entities, setEntities] = useState<Entity[]>(layout?.entities || []);
   const [connections, setConnections] = useState<Connection[]>(layout?.connections || []);
   const [selectedForConnection, setSelectedForConnection] = useState<string | null>(null);
@@ -56,10 +56,10 @@ export default function BlueprintCanvas({
     };
     const updatedEntities = [...entities, entityWithDefaults];
     setEntities(updatedEntities);
-    onLayoutChange?.({ 
-      ...layout, 
+    onLayoutChange?.({
+      ...layout,
       entities: updatedEntities,
-      connections: connections 
+      connections: connections
     });
   };
 
@@ -77,10 +77,10 @@ export default function BlueprintCanvas({
         };
         const updatedConnections = [...connections, newConnection];
         setConnections(updatedConnections);
-        onLayoutChange?.({ 
-          ...layout, 
-          entities, 
-          connections: updatedConnections 
+        onLayoutChange?.({
+          ...layout,
+          entities,
+          connections: updatedConnections
         });
       }
       setSelectedForConnection(null);
@@ -118,7 +118,6 @@ export default function BlueprintCanvas({
           {connections.map((conn) => {
             const fromEntity = entities.find(e => e.id === conn.fromEntityId);
             const toEntity = entities.find(e => e.id === conn.toEntityId);
-            
             if (!fromEntity || !toEntity) return null;
 
             const x1 = (fromEntity.x + fromEntity.width / 2) * GRID_SIZE;
@@ -131,9 +130,16 @@ export default function BlueprintCanvas({
                 key={conn.id}
                 points={[x1, y1, x2, y2]}
                 stroke="#94a3b8"
-                strokeWidth={4}
+                strokeWidth={6}
                 lineCap="round"
-                lineJoin="round"
+                onClick={() => {
+                  if (confirm('确定删除这条轨道吗？')) {
+                    // 调用 App 的删除函数（我们后面会暴露）
+                    if ((window as any).deleteConnection) {
+                      (window as any).deleteConnection(conn.id);
+                    }
+                  }
+                }}
               />
             );
           })}
@@ -143,7 +149,7 @@ export default function BlueprintCanvas({
         <Layer>
           {entities.map((entity, i) => {
             const isSelectedForConnection = selectedForConnection === entity.id;
-            
+
             return (
               <Group
                 key={entity.id}

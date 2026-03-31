@@ -36,7 +36,9 @@ function App() {
       setLoading(false);
     }
     fetchBlueprint();
-  }, []);
+    (window as any).deleteConnection = handleDeleteConnection;
+    return () => { delete (window as any).deleteConnection; };
+  }, [layout]);
 
   // ==================== 自动检测逻辑 ====================
   const runDetection = (currentLayout: any): DetectionResult => {
@@ -63,7 +65,7 @@ function App() {
       connectedEntityIds.add(conn.toEntityId);
     });
 
-    const isolatedEntities = currentLayout.entities.filter((e: any) => 
+    const isolatedEntities = currentLayout.entities.filter((e: any) =>
       !connectedEntityIds.has(e.id)
     );
 
@@ -112,12 +114,30 @@ function App() {
 
   const handleUpdateEntity = (updated: any) => {
     if (!layout) return;
-    const newEntities = layout.entities.map((e: any) => 
+    const newEntities = layout.entities.map((e: any) =>
       e.id === updated.id ? updated : e
     );
     const newLayout = { ...layout, entities: newEntities };
     setLayout(newLayout);
     setSelectedEntity(updated);
+  };
+
+  const handleDeleteEntity = (entityId: string) => {
+    if (!layout) return;
+    const newEntities = layout.entities.filter((e: any) => e.id !== entityId);
+    const newConnections = (layout.connections || []).filter(
+      (c: any) => c.fromEntityId !== entityId && c.toEntityId !== entityId
+    );
+    const newLayout = { ...layout, entities: newEntities, connections: newConnections };
+    setLayout(newLayout);
+    setSelectedEntity(null);   // 删除后取消选中
+  };
+
+  const handleDeleteConnection = (connId: string) => {
+    if (!layout) return;
+    const newConnections = (layout.connections || []).filter((c: any) => c.id !== connId);
+    const newLayout = { ...layout, connections: newConnections };
+    setLayout(newLayout);
   };
 
   const saveBlueprint = async () => {
@@ -179,17 +199,18 @@ function App() {
         <div className="flex flex-1 overflow-hidden">
           <div className="flex-1 p-6 overflow-auto">
             {layout && (
-              <BlueprintCanvas 
-                layout={layout} 
+              <BlueprintCanvas
+                layout={layout}
                 onLayoutChange={setLayout}
                 onEntitySelect={setSelectedEntity}
               />
             )}
           </div>
-          
-          <PropertyPanel 
-            selectedEntity={selectedEntity} 
-            onUpdateEntity={handleUpdateEntity} 
+
+          <PropertyPanel
+            selectedEntity={selectedEntity}
+            onUpdateEntity={handleUpdateEntity}
+            onDeleteEntity={handleDeleteEntity}   // 新增这行
           />
         </div>
 
@@ -197,13 +218,13 @@ function App() {
         {detection && (
           <div className="absolute bottom-6 right-6 bg-zinc-900 border border-zinc-700 rounded-2xl p-6 max-w-md shadow-2xl z-50">
             <div className="flex items-center gap-3 mb-4">
-              {detection.isValid ? 
-                <CheckCircle className="text-emerald-500 w-6 h-6" /> : 
+              {detection.isValid ?
+                <CheckCircle className="text-emerald-500 w-6 h-6" /> :
                 <AlertTriangle className="text-amber-500 w-6 h-6" />
               }
               <span className="text-lg font-semibold">保存前检测结果</span>
             </div>
-            
+
             {detection.errors.length > 0 && (
               <div className="text-red-400 mb-4 space-y-1">
                 {detection.errors.map((err, i) => (
@@ -211,7 +232,7 @@ function App() {
                 ))}
               </div>
             )}
-            
+
             {detection.warnings.length > 0 && (
               <div className="text-amber-400 text-sm space-y-1">
                 {detection.warnings.map((w, i) => (
@@ -219,7 +240,7 @@ function App() {
                 ))}
               </div>
             )}
-            
+
             {detection.isValid && detection.warnings.length === 0 && (
               <div className="text-emerald-400">✅ 蓝图检测通过，可以安全保存</div>
             )}
