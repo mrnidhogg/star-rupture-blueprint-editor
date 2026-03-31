@@ -117,4 +117,4 @@ export default function Toolbar({ onAddEntity }: ToolbarProps) {
       </div>
     </div>
   );
-}
+} 

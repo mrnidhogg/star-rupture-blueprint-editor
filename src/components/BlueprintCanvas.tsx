@@ -17,9 +17,15 @@ interface Entity {
 interface BlueprintCanvasProps {
   layout: any;
   onLayoutChange?: (newLayout: any) => void;
+  onEntitySelect?: (entity: Entity | null) => void;   // 新增：点击选中回调
 }
 
-export default function BlueprintCanvas({ layout, onLayoutChange }: BlueprintCanvasProps) {
+export default function BlueprintCanvas({ 
+  layout, 
+  onLayoutChange, 
+  onEntitySelect 
+}: BlueprintCanvasProps) {
+  
   const [entities, setEntities] = useState<Entity[]>(layout?.entities || []);
   const stageRef = useRef<any>(null);
 
@@ -32,7 +38,7 @@ export default function BlueprintCanvas({ layout, onLayoutChange }: BlueprintCan
     const entityWithDefaults = {
       ...newEntity,
       id: 'entity-' + Date.now(),
-      x: newEntity.x || 5,
+      x: newEntity.x || 6,
       y: newEntity.y || 5,
       width: newEntity.width || 3,
       height: newEntity.height || 3,
@@ -41,6 +47,11 @@ export default function BlueprintCanvas({ layout, onLayoutChange }: BlueprintCan
     const updated = [...entities, entityWithDefaults];
     setEntities(updated);
     onLayoutChange?.({ ...layout, entities: updated });
+  };
+
+  // 点击选中实体
+  const handleEntityClick = (entity: Entity) => {
+    onEntitySelect?.(entity);
   };
 
   useEffect(() => {
@@ -55,7 +66,7 @@ export default function BlueprintCanvas({ layout, onLayoutChange }: BlueprintCan
   return (
     <div className="border border-zinc-700 bg-zinc-950 rounded-xl overflow-hidden shadow-2xl">
       <Stage width={CANVAS_WIDTH} height={CANVAS_HEIGHT} ref={stageRef}>
-        {/* 网格 */}
+        {/* 网格背景 */}
         <Layer>
           {Array.from({ length: Math.ceil(CANVAS_WIDTH / GRID_SIZE) + 1 }).map((_, i) => (
             <Rect key={`v-${i}`} x={i * GRID_SIZE} y={0} width={1} height={CANVAS_HEIGHT} fill={gridColor} />
@@ -74,6 +85,8 @@ export default function BlueprintCanvas({ layout, onLayoutChange }: BlueprintCan
               y={entity.y * GRID_SIZE}
               rotation={entity.rotation}
               draggable
+              onClick={() => handleEntityClick(entity)}           // 新增点击事件
+              onTap={() => handleEntityClick(entity)}             // 移动端支持
               onDragEnd={(e) => {
                 const newX = Math.round(e.target.x() / GRID_SIZE);
                 const newY = Math.round(e.target.y() / GRID_SIZE);
