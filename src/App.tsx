@@ -197,8 +197,9 @@ function App() {
             {layout && (
               <BlueprintCanvas
                 layout={layout}
-                onLayoutChange={setLayout}
+                onLayoutChange={updateLayout}
                 onEntitySelect={setSelectedEntity}
+                onDeleteConnection={handleDeleteConnection}
               />
             )}
           </div>
