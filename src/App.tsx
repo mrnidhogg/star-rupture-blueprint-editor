@@ -31,14 +31,69 @@ function App() {
         setError('读取蓝图失败');
       } else {
         setBlueprint(data);
-        setLayout(data.layout);
+        setLayout(data.layout || { entities: [], connections: [] });
       }
       setLoading(false);
     }
     fetchBlueprint();
-    (window as any).deleteConnection = handleDeleteConnection;
-    return () => { delete (window as any).deleteConnection; };
-  }, [layout]);
+  }, []);
+
+  // 更新整个 layout
+  const updateLayout = (newLayout: any) => {
+    setLayout(newLayout);
+  };
+
+  const handleAddEntity = (type: string, machineId?: string, recipeId?: string, displayName?: string) => {
+    const newEntity = {
+      id: 'entity-' + Date.now(),
+      type,
+      machineId,
+      recipeId,
+      displayName,
+      x: 6,
+      y: 5,
+      rotation: 0,
+      width: type.includes('storage') || type.includes('depot') ? 4 : 3,
+      height: type.includes('storage') || type.includes('depot') ? 4 : 3,
+    };
+
+    const newLayout = {
+      ...layout,
+      entities: [...(layout.entities || []), newEntity],
+      connections: layout.connections || []
+    };
+    updateLayout(newLayout);
+  };
+
+  const handleDeleteEntity = (entityId: string) => {
+    const newEntities = (layout.entities || []).filter((e: any) => e.id !== entityId);
+    const newConnections = (layout.connections || []).filter(
+      (c: any) => c.fromEntityId !== entityId && c.toEntityId !== entityId
+    );
+
+    const newLayout = {
+      ...layout,
+      entities: newEntities,
+      connections: newConnections
+    };
+    updateLayout(newLayout);
+    setSelectedEntity(null);
+  };
+
+  const handleDeleteConnection = (connId: string) => {
+    const newConnections = (layout.connections || []).filter((c: any) => c.id !== connId);
+    const newLayout = { ...layout, connections: newConnections };
+    updateLayout(newLayout);
+  };
+
+  const handleUpdateEntity = (updated: any) => {
+    const newEntities = (layout.entities || []).map((e: any) =>
+      e.id === updated.id ? updated : e
+    );
+    const newLayout = { ...layout, entities: newEntities };
+    updateLayout(newLayout);
+    setSelectedEntity(updated);
+  };
 
   // ==================== 自动检测逻辑 ====================
   const runDetection = (currentLayout: any): DetectionResult => {
@@ -94,68 +149,14 @@ function App() {
     };
   };
 
-  const handleAddEntity = (type: string, machineId?: string, recipeId?: string, displayName?: string) => {
-    const newEntity = {
-      id: 'entity-' + Date.now(),
-      type,
-      machineId,
-      recipeId,
-      displayName,
-      x: 6,
-      y: 5,
-      rotation: 0,
-      width: type.includes('storage') ? 4 : 3,
-      height: type.includes('storage') ? 4 : 3,
-    };
-    if ((window as any).addEntityToCanvas) {
-      (window as any).addEntityToCanvas(newEntity);
-    }
-  };
-
-  const handleUpdateEntity = (updated: any) => {
-    if (!layout) return;
-    const newEntities = layout.entities.map((e: any) =>
-      e.id === updated.id ? updated : e
-    );
-    const newLayout = { ...layout, entities: newEntities };
-    setLayout(newLayout);
-    setSelectedEntity(updated);
-  };
-
-  const handleDeleteEntity = (entityId: string) => {
-    if (!layout) return;
-    const newEntities = layout.entities.filter((e: any) => e.id !== entityId);
-    const newConnections = (layout.connections || []).filter(
-      (c: any) => c.fromEntityId !== entityId && c.toEntityId !== entityId
-    );
-    const newLayout = { ...layout, entities: newEntities, connections: newConnections };
-    setLayout(newLayout);
-    setSelectedEntity(null);   // 删除后取消选中
-  };
-
-  const handleDeleteConnection = (connId: string) => {
-    if (!layout) return;
-    const newConnections = (layout.connections || []).filter((c: any) => c.id !== connId);
-    const newLayout = { ...layout, connections: newConnections };
-    setLayout(newLayout);
-  };
-
   const saveBlueprint = async () => {
-    if (!blueprint || !layout) {
-      alert('没有数据可保存');
-      return;
-    }
+    if (!blueprint || !layout) return;
 
     const check = runDetection(layout);
     setDetection(check);
 
     if (!check.isValid) {
-      const confirmSave = confirm(
-        `检测到以下问题：\n\n${check.errors.join('\n')}\n\n${check.warnings.join('\n')}\n\n是否仍要保存？`
-      );
-      if (!confirmSave) return;
-    } else if (check.warnings.length > 0) {
-      alert(`检测通过，但有以下提醒：\n${check.warnings.join('\n')}`);
+      if (!confirm(`检测到问题：\n${check.errors.join('\n')}\n\n是否仍要保存？`)) return;
     }
 
     const { error } = await supabase
@@ -163,10 +164,9 @@ function App() {
       .update({ layout })
       .eq('id', blueprint.id);
 
-    if (error) {
-      alert('保存失败：' + error.message);
-    } else {
-      alert('✅ 蓝图保存成功！');
+    if (error) alert('保存失败：' + error.message);
+    else {
+      alert('✅ 保存成功！');
       setDetection(null);
     }
   };
@@ -187,11 +187,7 @@ function App() {
               <p className="text-sm text-zinc-400">{blueprint?.description}</p>
             </div>
           </div>
-
-          <button
-            onClick={saveBlueprint}
-            className="bg-emerald-600 hover:bg-emerald-500 px-6 py-2 rounded-lg font-medium flex items-center gap-2"
-          >
+          <button onClick={saveBlueprint} className="bg-emerald-600 hover:bg-emerald-500 px-6 py-2 rounded-lg font-medium">
             💾 保存蓝图
           </button>
         </div>
@@ -210,7 +206,7 @@ function App() {
           <PropertyPanel
             selectedEntity={selectedEntity}
             onUpdateEntity={handleUpdateEntity}
-            onDeleteEntity={handleDeleteEntity}   // 新增这行
+            onDeleteEntity={handleDeleteEntity}
           />
         </div>
 
