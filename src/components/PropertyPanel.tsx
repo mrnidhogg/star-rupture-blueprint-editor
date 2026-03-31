@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 
 interface PropertyPanelProps {
   selectedEntity: any;
@@ -6,6 +7,45 @@ interface PropertyPanelProps {
 }
 
 export default function PropertyPanel({ selectedEntity, onUpdateEntity }: PropertyPanelProps) {
+  const [recipes, setRecipes] = useState<any[]>([]);
+  const [loadingRecipes, setLoadingRecipes] = useState(false);
+
+  useEffect(() => {
+    if (selectedEntity?.type === 'machine' && selectedEntity.machineId) {
+      loadRecipesForMachine(selectedEntity.machineId);
+    } else {
+      setRecipes([]);
+    }
+  }, [selectedEntity]);
+
+  const loadRecipesForMachine = async (machineId: string) => {
+    setLoadingRecipes(true);
+    
+    const { data, error } = await supabase
+      .from('recipes')
+      .select('id, display_name, name, crafting_time')
+      .eq('machine_id', machineId);
+
+    if (error) {
+      console.error('加载配方失败:', error);
+      setRecipes([]);
+    } else {
+      setRecipes(data || []);
+    }
+    setLoadingRecipes(false);
+  };
+
+  const handleRecipeChange = (recipeId: string) => {
+    if (!selectedEntity) return;
+    
+    const updated = {
+      ...selectedEntity,
+      recipeId: recipeId || null
+    };
+    
+    onUpdateEntity(updated);
+  };
+
   if (!selectedEntity) {
     return (
       <div className="w-80 bg-zinc-900 border-l border-zinc-700 p-6 text-zinc-400">
@@ -15,19 +55,23 @@ export default function PropertyPanel({ selectedEntity, onUpdateEntity }: Proper
     );
   }
 
+  const isMachine = selectedEntity.type === 'machine';
+
   return (
     <div className="w-80 bg-zinc-900 border-l border-zinc-700 p-6 overflow-auto">
       <h3 className="text-lg font-semibold mb-6 text-white">建筑属性</h3>
       
-      <div className="space-y-5">
+      <div className="space-y-6">
         <div>
-          <label className="block text-sm text-zinc-400 mb-1">建筑类型</label>
-          <div className="bg-zinc-800 px-4 py-2.5 rounded-lg">{selectedEntity.displayName || selectedEntity.type}</div>
+          <label className="block text-sm text-zinc-400 mb-1">建筑名称</label>
+          <div className="bg-zinc-800 px-4 py-3 rounded-lg text-white font-medium">
+            {selectedEntity.displayName || selectedEntity.type}
+          </div>
         </div>
 
         <div>
-          <label className="block text-sm text-zinc-400 mb-1">位置 (网格坐标)</label>
-          <div className="bg-zinc-800 px-4 py-2.5 rounded-lg">
+          <label className="block text-sm text-zinc-400 mb-1">网格位置</label>
+          <div className="bg-zinc-800 px-4 py-3 rounded-lg">
             X: {selectedEntity.x}　Y: {selectedEntity.y}
           </div>
         </div>
@@ -35,7 +79,7 @@ export default function PropertyPanel({ selectedEntity, onUpdateEntity }: Proper
         <div>
           <label className="block text-sm text-zinc-400 mb-1">旋转角度</label>
           <select 
-            className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2.5"
+            className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2.5 text-white"
             value={selectedEntity.rotation || 0}
             onChange={(e) => onUpdateEntity({ ...selectedEntity, rotation: parseInt(e.target.value) })}
           >
@@ -46,12 +90,43 @@ export default function PropertyPanel({ selectedEntity, onUpdateEntity }: Proper
           </select>
         </div>
 
-        {selectedEntity.type === 'machine' && (
+        {isMachine && (
           <div>
-            <label className="block text-sm text-zinc-400 mb-1">已绑定配方</label>
-            <div className="bg-emerald-950 border border-emerald-800 text-emerald-300 px-4 py-3 rounded-lg text-sm">
-              {selectedEntity.recipeId ? '已绑定配方' : '⚠️ 未绑定生产计划'}
-            </div>
+            <label className="block text-sm text-zinc-400 mb-2">生产配方</label>
+            
+            {loadingRecipes ? (
+              <div className="text-zinc-400 py-2">加载配方中...</div>
+            ) : recipes.length > 0 ? (
+              <select 
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 text-white"
+                value={selectedEntity.recipeId || ''}
+                onChange={(e) => handleRecipeChange(e.target.value)}
+              >
+                <option value="">-- 请选择生产计划 --</option>
+                {recipes.map((recipe) => (
+                  <option key={recipe.id} value={recipe.id}>
+                    {recipe.display_name || recipe.name}
+                    {recipe.crafting_time && ` (${recipe.crafting_time}s)`}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <div className="bg-zinc-800 border border-zinc-600 text-zinc-300 px-4 py-3 rounded-lg text-sm">
+                该机器暂无可用配方
+              </div>
+            )}
+
+            {selectedEntity.recipeId && (
+              <div className="mt-3 text-xs text-emerald-400 flex items-center gap-1">
+                ✓ 已绑定生产计划
+              </div>
+            )}
+          </div>
+        )}
+
+        {!isMachine && (
+          <div className="text-sm text-zinc-400 bg-zinc-800 p-4 rounded-lg">
+            当前建筑为运输/仓储类型，暂不支持绑定生产计划
           </div>
         )}
       </div>
