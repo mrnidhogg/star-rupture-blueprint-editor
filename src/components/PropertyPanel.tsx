@@ -23,7 +23,7 @@ export default function PropertyPanel({ selectedEntity, onUpdateEntity }: Proper
     
     const { data, error } = await supabase
       .from('recipes')
-      .select('id, display_name, name, crafting_time')
+      .select('id, display_name, crafting_time, output_quantity')
       .eq('machine_id', machineId);
 
     if (error) {
@@ -33,6 +33,13 @@ export default function PropertyPanel({ selectedEntity, onUpdateEntity }: Proper
       setRecipes(data || []);
     }
     setLoadingRecipes(false);
+  };
+
+  // 计算每分钟产量
+  const calculatePerMinute = (craftingTime: string | number, outputQuantity: number = 1): number => {
+    const time = parseFloat(craftingTime as string);
+    if (!time || time <= 0) return 0;
+    return Math.round((60 / time) * outputQuantity);
   };
 
   const handleRecipeChange = (recipeId: string) => {
@@ -103,12 +110,14 @@ export default function PropertyPanel({ selectedEntity, onUpdateEntity }: Proper
                 onChange={(e) => handleRecipeChange(e.target.value)}
               >
                 <option value="">-- 请选择生产计划 --</option>
-                {recipes.map((recipe) => (
-                  <option key={recipe.id} value={recipe.id}>
-                    {recipe.display_name || recipe.name}
-                    {recipe.crafting_time && ` (${recipe.crafting_time}s)`}
-                  </option>
-                ))}
+                {recipes.map((recipe) => {
+                  const perMinute = calculatePerMinute(recipe.crafting_time, recipe.output_quantity || 1);
+                  return (
+                    <option key={recipe.id} value={recipe.id}>
+                      {recipe.display_name} ({perMinute}个/分)
+                    </option>
+                  );
+                })}
               </select>
             ) : (
               <div className="bg-zinc-800 border border-zinc-600 text-zinc-300 px-4 py-3 rounded-lg text-sm">
