@@ -18,6 +18,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [detection, setDetection] = useState<DetectionResult | null>(null);
+  const [isConnectMode, setIsConnectMode] = useState(false);
 
   useEffect(() => {
     async function fetchBlueprint() {
@@ -176,7 +177,11 @@ function App() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white flex">
-      <Toolbar onAddEntity={handleAddEntity} />
+      <Toolbar
+        onAddEntity={handleAddEntity}
+        onToggleConnectMode={() => setIsConnectMode(!isConnectMode)} // 新增 
+        isConnectMode={isConnectMode} // 新增 
+      />
 
       <div className="flex-1 flex flex-col">
         <div className="h-16 border-b border-zinc-700 bg-zinc-900 flex items-center justify-between px-6">
@@ -200,6 +205,8 @@ function App() {
                 onLayoutChange={updateLayout}
                 onEntitySelect={setSelectedEntity}
                 onDeleteConnection={handleDeleteConnection}
+                isConnectMode={isConnectMode} // 新增 
+                onExitConnectMode={() => setIsConnectMode(false)} // 新增 
               />
             )}
           </div>

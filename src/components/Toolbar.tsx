@@ -2,9 +2,15 @@ import React from 'react';
 
 interface ToolbarProps {
   onAddEntity: (type: string, machineId?: string, recipeId?: string, displayName?: string) => void;
+  onToggleConnectMode?: () => void;   // 可选
+  isConnectMode?: boolean;            // 可选
 }
 
-export default function Toolbar({ onAddEntity }: ToolbarProps) {
+export default function Toolbar({ 
+  onAddEntity, 
+  onToggleConnectMode, 
+  isConnectMode = false 
+}: ToolbarProps) {
   const buildings = [
     {
       name: "冶炼厂 (Smelter)",
@@ -42,46 +48,11 @@ export default function Toolbar({ onAddEntity }: ToolbarProps) {
       color: "#a855f7"
     },
     {
-      name: "加压器 (Pressurizer)",
-      displayName: "加压器",
-      type: "machine",
-      machineId: "cf8a95ba-6edc-408a-b157-31da39851e86",
-      color: "#14b8a6"
-    },
-    {
       name: "初级储物仓库",
       displayName: "初级仓库",
       type: "storage",
       machineId: "72797c78-a24f-4ac7-8156-a4512bd7a96d",
       color: "#3b82f6"
-    },
-    {
-      name: "中级储物仓库",
-      displayName: "中级仓库",
-      type: "storage",
-      machineId: "104edd12-a830-4ec0-b674-713f5858a71a",
-      color: "#2563eb"
-    },
-    {
-      name: "轨道连接器",
-      displayName: "轨道连接器",
-      type: "connector",
-      machineId: "1ceb1bf1-bcd2-4c6c-a606-dc2f70ede373",
-      color: "#f59e0b"
-    },
-    {
-      name: "货物派发器",
-      displayName: "货物派发器",
-      type: "dispatcher",
-      machineId: "65a3319c-8cb6-4e2e-b672-0734e59b860c",
-      color: "#ea580c"
-    },
-    {
-      name: "货物接收器",
-      displayName: "货物接收器",
-      type: "receiver",
-      machineId: "22cb4d7c-2304-4bf0-9e47-27bf57516c0a",
-      color: "#c026d3"
     },
   ];
 
@@ -90,16 +61,26 @@ export default function Toolbar({ onAddEntity }: ToolbarProps) {
       <h3 className="text-xl font-bold mb-6 text-white flex items-center gap-2">
         🏗️ 建筑库
       </h3>
-      
+
+      {/* 连接轨道模式按钮 */}
+      <button
+        onClick={onToggleConnectMode}
+        className={`w-full mb-6 py-3.5 rounded-2xl font-medium flex items-center justify-center gap-2 transition-all ${
+          isConnectMode 
+            ? 'bg-yellow-600 hover:bg-yellow-500 text-white shadow-lg' 
+            : 'bg-zinc-700 hover:bg-zinc-600 text-white'
+        }`}
+      >
+        🔗 {isConnectMode ? '退出连接模式' : '进入连接轨道模式'}
+      </button>
+
       <div className="space-y-3">
         {buildings.map((item, index) => (
           <div
             key={index}
             className="group bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 hover:border-zinc-500 rounded-xl p-4 cursor-grab active:cursor-grabbing transition-all"
             draggable
-            onDragStart={(e) => {
-              e.dataTransfer.setData('application/json', JSON.stringify(item));
-            }}
+            onDragStart={(e) => e.dataTransfer.setData('application/json', JSON.stringify(item))}
             onClick={() => onAddEntity(item.type, item.machineId, "", item.displayName)}
           >
             <div className="flex items-center gap-3">
@@ -109,7 +90,7 @@ export default function Toolbar({ onAddEntity }: ToolbarProps) {
               />
               <div className="flex-1">
                 <div className="font-medium text-white">{item.name}</div>
-                <div className="text-xs text-zinc-400">点击或拖拽到画布</div>
+                <div className="text-xs text-zinc-400">点击或拖拽放置</div>
               </div>
             </div>
           </div>
@@ -117,4 +98,4 @@ export default function Toolbar({ onAddEntity }: ToolbarProps) {
       </div>
     </div>
   );
-} 
+}
